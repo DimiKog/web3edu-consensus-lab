@@ -27,6 +27,11 @@ contract BlockVoting {
     // -------------------------
     // Proposal storage
     // -------------------------
+    enum ProposalType {
+        BLOCK,
+        ADD_VALIDATOR
+    }
+
     enum Status {
         Active,
         Accepted,
@@ -35,7 +40,9 @@ contract BlockVoting {
     }
 
     struct Proposal {
-        bytes32 blockHash;
+        ProposalType proposalType;
+        bytes32 blockHash; // used for BLOCK proposals
+        address validatorAddress; // used for ADD_VALIDATOR proposals
         string summary;
         uint64 createdAt;
         uint64 deadline;
@@ -74,6 +81,7 @@ contract BlockVoting {
         uint32 noVotes
     );
     event ProposalExpired(uint256 indexed proposalId);
+    event ValidatorAdded(address indexed validator);
 
     // -------------------------
     // Constructor
@@ -130,7 +138,9 @@ contract BlockVoting {
         uint64 dl = nowTs + durationSeconds;
 
         proposals[proposalCount] = Proposal({
+            proposalType: ProposalType.BLOCK,
             blockHash: blockHash,
+            validatorAddress: address(0),
             summary: summary,
             createdAt: nowTs,
             deadline: dl,
@@ -140,6 +150,36 @@ contract BlockVoting {
         });
 
         emit ProposalCreated(proposalCount, blockHash, dl, summary);
+        return proposalCount;
+    }
+
+    function createAddValidatorProposal(
+        address newValidator,
+        string calldata summary,
+        uint64 durationSeconds
+    ) external onlyOwner returns (uint256) {
+        require(newValidator != address(0), "Zero address");
+        require(!isValidator[newValidator], "Already validator");
+        require(durationSeconds >= 60, "Duration too short");
+
+        proposalCount += 1;
+
+        uint64 nowTs = uint64(block.timestamp);
+        uint64 dl = nowTs + durationSeconds;
+
+        proposals[proposalCount] = Proposal({
+            proposalType: ProposalType.ADD_VALIDATOR,
+            blockHash: bytes32(0),
+            validatorAddress: newValidator,
+            summary: summary,
+            createdAt: nowTs,
+            deadline: dl,
+            status: Status.Active,
+            yesVotes: 0,
+            noVotes: 0
+        });
+
+        emit ProposalCreated(proposalCount, bytes32(0), dl, summary);
         return proposalCount;
     }
 
@@ -187,6 +227,17 @@ contract BlockVoting {
 
         if (p.yesVotes >= q) {
             p.status = Status.Accepted;
+
+            // Apply governance decision
+            if (p.proposalType == ProposalType.ADD_VALIDATOR) {
+                address v = p.validatorAddress;
+                if (!isValidator[v]) {
+                    isValidator[v] = true;
+                    _validators.push(v);
+                    emit ValidatorAdded(v);
+                }
+            }
+
             emit ProposalFinalized(proposalId, p.status, p.yesVotes, p.noVotes);
         } else if (p.noVotes >= q) {
             p.status = Status.Rejected;
