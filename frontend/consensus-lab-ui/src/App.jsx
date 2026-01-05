@@ -250,6 +250,21 @@ export default function App() {
               Wrong network — switch MetaMask to chainId {CONFIG.chainId}
             </p>
           )}
+          {account && !isOwner && !isValidator && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "6px 12px",
+                borderRadius: 6,
+                backgroundColor: "#374151",
+                color: "#e5e7eb",
+                fontSize: 12,
+                display: "inline-block"
+              }}
+            >
+              👀 Observer mode — you can view proposals and results, but cannot vote.
+            </div>
+          )}
         </>
       )}
 
