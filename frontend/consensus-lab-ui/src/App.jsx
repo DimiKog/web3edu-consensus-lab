@@ -9,6 +9,9 @@ export default function App() {
 
   const [validatorCount, setValidatorCount] = useState(null);
   const [quorum, setQuorum] = useState(null);
+  // Byzantine fault tolerance: f = floor((N - 1) / 3)
+  const byzantineTolerance =
+    validatorCount !== null ? Math.floor((validatorCount - 1) / 3) : null;
   const [proposalCount, setProposalCount] = useState(null);
   const [error, setError] = useState("");
 
@@ -494,10 +497,18 @@ export default function App() {
       >
         <h3>On-chain Consensus Parameters</h3>
         <p>
-          <b>Validator count:</b> {validatorCount ?? "…"}
+          <b>Validator count (N):</b> {validatorCount ?? "…"}
         </p>
         <p>
           <b>Quorum (≥2/3):</b> {quorum ?? "…"}
+        </p>
+        <p>
+          <b>Byzantine tolerance (f):</b>{" "}
+          {byzantineTolerance !== null ? byzantineTolerance : "…"}
+        </p>
+        <p style={{ fontSize: 12, color: "#9ca3af" }}>
+          Up to <b>f</b> faulty validators can be tolerated while still reaching
+          consensus.
         </p>
         <p>
           <b>Proposals created:</b> {proposalCount ?? "…"}
